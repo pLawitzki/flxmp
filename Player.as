@@ -28,8 +28,6 @@ package flxmp
 	import flash.utils.ByteArray;
 	import org.flashdevelop.utils.FlashConnect;
 	
-	// TODO: Song "funkkin_-_xhale_-_mole2.xm" is played too fast somehow
-	
 	public class Player
 	{
 		private var mod:Module;
@@ -106,6 +104,9 @@ package flxmp
 		public function get peakL():Number		{ if(soundChannel) return soundChannel.leftPeak; else return 0.0 }
 		public function get peakR():Number		{ if(soundChannel) return soundChannel.rightPeak; else return 0.0 }
 		
+		// TODO: there are still clicks on at pattern transitions!
+		// TODO: first position of volume envelope sometimes fails to be played correctly
+		
 		private function onSampleData(e:SampleDataEvent):void
 		{
 			smpIncrement 	= 0;
@@ -145,7 +146,7 @@ package flxmp
 						
 						if (chan.instrument.numSamples <= 0)
 							continue;
-						
+							
 						//TODO: try to move this somewhere outside the sample processing loop
 						if ((tickCnt == (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97)
 							chan.targetVolume	= 0.0;
@@ -169,14 +170,27 @@ package flxmp
 							}
 						}
 						
+						// panning ramping
+						if (chan.panning != chan.targetPanning)
+						{
+							if (chan.panning > chan.targetPanning)
+							{
+								if ((chan.panning 	-= 5e-3) < chan.targetPanning)
+									chan.panning		= chan.targetPanning;
+							}else {
+								if ((chan.panning	+= 5e-3) > chan.targetPanning)
+									chan.panning		= chan.targetPanning;
+							}
+						}
+						
 						lastValue	= chan.waveData[chan.lastIndex];
 						nextValue	= chan.waveData[chan.nextIndex];
 						sample		= lastValue + (nextValue - lastValue) * (chan.wavePos - Number(int(chan.wavePos)));
 						sample		*= gVolume;
 						sample		*= chan.volume;
 						
-						bufferL[j] += sample * chan.volL;
-						bufferR[j] += sample * chan.volR;
+						bufferL[j] += sample * 0.5 //(1.0 - chan.panning);
+						bufferR[j] += sample * 0.5 //chan.panning;
 						
 						if(chan.waveType > 0)
 						{
@@ -289,22 +303,25 @@ package flxmp
 				
 				// read new instrument
 				var inst:int		= pattern.readUnsignedByte();
-				if (inst > 0)
+				if (inst > 0 && chan.note < 97)
 				{
 					chan.wavePos		= 0.0;
+					chan.volEnvPos		= 0;
+					chan.panEnvPos		= 0;
 					chan.lastIndex		= 0;
 					chan.nextIndex		= 1;
 					chan.instrument		= mod.instruments[int(inst - 1)];
 					
 					if (chan.instrument.numSamples > 0)
 					{
-						chan.wave			= chan.instrument.waves[chan.instrument.smpNotes[chan.note]];  // TODO: BUG -- handle instruments which have noe wave!
+						chan.wave			= chan.instrument.waves[chan.instrument.smpNotes[chan.note]]; 
 						chan.waveLength		= Number(chan.wave.length) - 1;
 						chan.loopStart		= Number(chan.wave.loopStart);
 						chan.loopEnd		= Number(chan.wave.loopEnd);
 						chan.loopLength		= Number(chan.wave.loopLength);
 						chan.waveData		= chan.wave.samples;
 						chan.waveVolume		= chan.wave.volume;
+						chan.wavePanning	= chan.wave.panning;
 						chan.waveType		= chan.wave.type;
 					}
 				}
@@ -326,9 +343,10 @@ package flxmp
 						chan.nextIndex		= 1;
 						chan.realNote		= chan.note + chan.wave.relNote;
 						chan.keyDown 		= true;
-						chan.targetVolume	= 1.0;
 						chan.fadeout		= 1.0;
 						chan.volEnvPos		= 0;
+						chan.panEnvPos		= 0;
+						chan.columnVolume	= 1.0;
 						chan.oldPeriod		= chan.period;
 						chan.period			= 7680 - (chan.realNote-1) * 64 - (chan.wave.finetune * 0.5);
 						chan.targetPeriod	= chan.period;
@@ -339,7 +357,7 @@ package flxmp
 						if (chan.instrument != null)
 						{
 							if (!chan.instrument.volON)
-								chan.targetVolume 	= 0.0;
+								chan.columnVolume 	= 0.0;
 						}
 					}
 					chan.vibtime			= 0;
@@ -347,7 +365,7 @@ package flxmp
 				
 				// volume column
 				if (chan.volumeCommand > 0xF && chan.volumeCommand < 0x51)
-						chan.targetVolume 	= Number((0x10 - chan.volumeCommand) / 0x40);
+						chan.columnVolume 	= Number((0x10 - chan.volumeCommand) / 0x40);
 			}
 		}
 		
@@ -355,22 +373,65 @@ package flxmp
 		{
 			for (var i:int = 0; i < mod.numChannels; i++)
 			{
-				chan 			= mod.channels[i];
-					
-				chan.tempVol	= chan.waveVolume;
+				chan 				= mod.channels[i];
 				
+				// volume commands
 				if (chan.volumeCommand > 0x50)
 				{
-					// TODO: 	implement volume commands
-					// 			HERE ...
+					if ((chan.volumeCommand & 0xF0) == 0x60)
+					{
+						// TODO:	Volume slide down
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0x60)
+					{
+						// TODO:	Volume slide up
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0x70)
+					{
+						// TODO:	Volume slide down
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0x80)
+					{
+						// TODO:	Fine volume slide down
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0x90)
+					{
+						// TODO:	Fine volume slide up
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0xA0)
+					{
+						// TODO:	Set vibrato speed
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0xB0)
+					{
+						// TODO:	Vibrato
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0xC0)	// Set panning
+					{
+						chan.wavePanning	= Number(chan.volumeCommand & 0xF) * 6.25e-2
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0xD0)
+					{
+						// TODO:	Panning slide left
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0xE0)
+					{
+						// TODO:	Panning slide right
+					}
+					else if ((chan.volumeCommand & 0xF0) == 0xF0)
+					{
+						// TODO:	Tone Porta
+					}
 				}
+				
+				chan.targetVolume	= chan.waveVolume * chan.columnVolume;
 				
 				// EFFECTS
 				if (chan.effect == 0x0)
 				{
 					//TODO: implement arpeggio
 				}
-				else if (chan.effect == 0x1)		// portamento up
+				else if (chan.effect == 0x1)	// portamento up
 				{
 					if (chan.parameter == 0)
 						chan.parameter 	= chan.oldParameter;
@@ -444,9 +505,9 @@ package flxmp
 				{
 					// TODO: implement Tremolo
 				}
-				else if (chan.effect == 0x8)
+				else if (chan.effect == 0x8)	// Set panning
 				{
-					// TODO: implement Set panning
+					chan.wavePanning	= Number(chan.parameter) * 3.90625e-3;
 				}
 				else if (chan.effect == 0x9)	// Sample offset
 				{
@@ -471,11 +532,8 @@ package flxmp
 					//		---   -- C10 -> Changes the volume to $10
 					// NOTE: The volume can't be greater than $40 If no volume is specified the sample will be played at defined volume in the instrument editor (see 4.xxx)
 				}
-				else if (chan.effect == 0xD)
+				else if (chan.effect == 0xD)	// pattern break
 				{
-					// TODO: implement Pattern Break
-					// Breaks the current pattern, jumps to next pattern and start playing at specified position.
-					//		Ex: --- -- D16 -> Breaks the pattern and starts then next pattern at position $16
 					if (tickCnt == 0)
 					{
 						patternIndex++;
@@ -484,7 +542,8 @@ package flxmp
 						
 						pattern = mod.patterns[mod.patternOrder[patternIndex]];
 						pattern.position = chan.parameter * 5 * mod.numChannels;
-					}//TODO: need to test if this effect jumps to the correct row position!
+						// TODO: catch array access fault, when target position is outside of pattern length!
+					}
 				}
 				else if (chan.effect == 0xE)
 				{
@@ -535,7 +594,7 @@ package flxmp
 					}
 					else if (upperByte == 0xC0)	// note cut
 					{
-						if (tickCnt == (chan.parameter & 0xF))
+						if (tickCnt >= (chan.parameter & 0xF))
 							chan.targetVolume	= 0.0;
 					}
 					else if (upperByte == 0xD0)
@@ -547,7 +606,7 @@ package flxmp
 						// TODO: implement Pattern delay
 					}
 				}
-				else if (chan.effect == 0xF)			// set tempo / BPM
+				else if (chan.effect == 0xF)	// set tempo / BPM
 				{	
 					if (chan.parameter > 0)
 					{
@@ -592,8 +651,12 @@ package flxmp
 						chan.parameter = chan.oldParameter;
 						
 					if (tickCnt % (chan.parameter & 0xF) == 0)
+					{
+						//chan.volEnvPos = 0;
+						//chan.panEnvPos = 0;
 						chan.wavePos = 0;
-						
+					}
+					
 					// volume change
 					var volChange:int	= chan.parameter >> 4;
 					if (volChange == 1)
@@ -647,10 +710,11 @@ package flxmp
 				
 				if (chan.instrument == null)
 					continue;
-				
+					
+				// process volume envelope and fadeout
 				if(chan.instrument.volON)
 				{
-					chan.tempVol		*= chan.instrument.volumeEnvelope[chan.volEnvPos];
+					chan.targetVolume		*= chan.instrument.volumeEnvelope[chan.volEnvPos];
 					
 					chan.volEnvPos++;
 					if (chan.keyDown)
@@ -663,10 +727,12 @@ package flxmp
 					}else {
 						if (chan.fadeout > 0.0)
 						{
-							chan.fadeout	-= chan.instrument.fadeout * 3.0517578125e-5;
-							chan.tempVol	*= chan.fadeout;
+							chan.fadeout		-= chan.instrument.fadeout * 3.0517578125e-5;
+							if (chan.fadeout < 0.0)
+								chan.fadeout = 0.0;
+								
+							chan.targetVolume	*= chan.fadeout;
 						}else {
-							chan.tempVol	= 0.0;
 							chan.targetVolume = 0.0;
 						}
 					}
@@ -683,13 +749,32 @@ package flxmp
 					}
 				}
 				
-				if (chan.instrument.panON)
+				// process panning
+				/*if (chan.instrument.panON)
 				{
-					//TODO: implement panning evelope
-				}
-				
-				chan.volL		= chan.tempVol * 0.5;
-				chan.volR		= chan.tempVol * 0.5;
+					chan.targetPanning		+= (chan.instrument.panningEnvelope[chan.panEnvPos] * (0.5 - Math.abs(chan.targetPanning-0.5)));
+					
+					chan.panEnvPos++;
+					if (chan.keyDown)
+					{
+						if (chan.instrument.panSUS)
+						{
+							if (chan.panEnvPos > chan.instrument.panSustain)
+								chan.panEnvPos = chan.instrument.panSustain;
+						}
+					}
+					
+					if (chan.instrument.panLOOP)
+					{
+						if (chan.panEnvPos >= chan.instrument.panLoopEnd)
+							chan.panEnvPos = chan.instrument.panLoopStart;
+					}
+					else
+					{
+						if (chan.panEnvPos >= chan.instrument.panEnvLength)
+							chan.panEnvPos	= chan.instrument.panEnvLength-1;
+					}
+				}*/
 			}
 		}
 	}

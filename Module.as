@@ -61,7 +61,7 @@ package flxmp
 			
 			bytes.position 	= 76;
 			defaultTempo	= bytes.readUnsignedShort();
-			defaultBPM		= bytes.readUnsignedShort();
+			defaultBPM		= bytes.readUnsignedShort() - 10;
 			bpm				= defaultBPM;
 			tempo			= defaultTempo;
 			
@@ -177,7 +177,7 @@ package flxmp
 							fstY = volPanY[pointIndex];
 							sndX = volPanX[pointIndex + 1];
 							sndY = volPanY[pointIndex + 1];
-							instruments[i].panningEnvelope[j] = fstY + ((sndY - fstY) / (sndX - fstX)) * (j - fstX);
+							instruments[i].panningEnvelope[j] = (fstY + ((sndY - fstY) / (sndX - fstX)) * (j - fstX))/64;
 						}
 					}
 					
@@ -216,7 +216,7 @@ package flxmp
 						instruments[i].waves[j].type		= bytes.readUnsignedByte();
 						if ((instruments[i].waves[j].type & 0x10) > 0) instruments[i].waves[j].sixteenbit = true; else instruments[i].waves[j].sixteenbit = false;
 						instruments[i].waves[j].type		= instruments[i].waves[j].type & 0x3;
-						instruments[i].waves[j].panning		= bytes.readUnsignedByte();
+						instruments[i].waves[j].panning		= Number(bytes.readUnsignedByte())/256;
 						instruments[i].waves[j].relNote		= bytes.readByte();
 						bytes.position						+= 1;
 						instruments[i].waves[j].name		= bytes.readMultiByte(22, "us-ascii");

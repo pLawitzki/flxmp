@@ -35,7 +35,7 @@ package flxmp
 		public var finetune:Number;
 		public var sixteenbit:Boolean;
 		public var type:int;
-		public var panning:int;
+		public var panning:Number;
 		public var relNote:int;
 		
 		public function Wave()

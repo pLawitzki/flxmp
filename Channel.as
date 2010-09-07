@@ -34,11 +34,11 @@ package flxmp
 		public var oldPeriod:int;
 		public var instrument:Instrument;
 		public var volume:Number;
+		public var panning:Number;
+		public var columnVolume:Number;
 		public var targetVolume:Number;
-		public var tempVol:Number;
+		public var targetPanning:Number;
 		public var volumeCommand:int;
-		public var volL:Number;
-		public var volR:Number;
 		public var fadeout:Number;
 		public var panEnvPos:int;
 		public var volEnvPos:int;
@@ -50,6 +50,7 @@ package flxmp
 		public var waveType:int;
 		public var wavePos:Number;
 		public var waveVolume:Number;
+		public var wavePanning:Number;
 		public var lastIndex:int;
 		public var nextIndex:int;
 		public var waveStep:Number;
@@ -77,6 +78,8 @@ package flxmp
 			waveStep	= 0.0;
 			waveData	= new Vector.<Number>;
 			waveData.push(0.0);
+			wavePanning	= 0.5;
+			waveVolume	= 1.0;
 			loopStart	= 0.0;
 			loopEnd		= 1.0;
 			loopLength	= 1.0;
@@ -85,8 +88,6 @@ package flxmp
 			rampOffset	= 0.0;
 			waveReverse	= false;
 			fadeout		= 1.0;
-			volL		= 0.5;
-			volR		= 0.5;
 			volEnvPos	= 0;
 			panEnvPos	= 0;
 			vib			= false;
@@ -94,8 +95,11 @@ package flxmp
 			vibrate		= 0.0;
 			vibform		= 0;
 			vibtime		= 0.0;
+			columnVolume = 1.0;
 			volume		= 0.0;
+			panning		= 0.5;
 			targetVolume = 0.0;
+			targetPanning = 0.5;
 		}
 		
 	}
