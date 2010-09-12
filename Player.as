@@ -189,8 +189,8 @@ package flxmp
 						sample		*= gVolume;
 						sample		*= chan.volume;
 						
-						bufferL[j] += sample * 0.5 //(1.0 - chan.panning);
-						bufferR[j] += sample * 0.5 //chan.panning;
+						bufferL[j] += sample * (1.0 - chan.panning);
+						bufferR[j] += sample * chan.panning;
 						
 						if(chan.waveType > 0)
 						{
@@ -425,6 +425,7 @@ package flxmp
 				}
 				
 				chan.targetVolume	= chan.waveVolume * chan.columnVolume;
+				chan.targetPanning 	= chan.wavePanning
 				
 				// EFFECTS
 				if (chan.effect == 0x0)
@@ -750,7 +751,7 @@ package flxmp
 				}
 				
 				// process panning
-				/*if (chan.instrument.panON)
+				if (chan.instrument.panON)
 				{
 					chan.targetPanning		+= (chan.instrument.panningEnvelope[chan.panEnvPos] * (0.5 - Math.abs(chan.targetPanning-0.5)));
 					
@@ -774,7 +775,7 @@ package flxmp
 						if (chan.panEnvPos >= chan.instrument.panEnvLength)
 							chan.panEnvPos	= chan.instrument.panEnvLength-1;
 					}
-				}*/
+				}
 			}
 		}
 	}
