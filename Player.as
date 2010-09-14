@@ -753,7 +753,7 @@ package flxmp
 				// process panning
 				if (chan.instrument.panON)
 				{
-					chan.targetPanning		+= (chan.instrument.panningEnvelope[chan.panEnvPos] * (0.5 - Math.abs(chan.targetPanning-0.5)));
+					chan.targetPanning		+= ((chan.instrument.panningEnvelope[chan.panEnvPos]-0.5) * (0.5 - Math.abs(chan.targetPanning-0.5)));
 					
 					chan.panEnvPos++;
 					if (chan.keyDown)
