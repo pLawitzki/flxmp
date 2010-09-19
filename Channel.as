@@ -43,6 +43,7 @@ package flxmp
 		public var panEnvPos:int;
 		public var volEnvPos:int;
 		public var effect:int;
+		public var ignoreInstrument:Boolean;
 		public var parameter:int;
 		public var oldParameter:int;
 		public var wave:Wave;
@@ -61,7 +62,6 @@ package flxmp
 		public var loopEnd:Number;
 		public var loopLength:Number;
 		public var keyDown:Boolean;
-		public var rampOffset:Number;
 		public var vibdepth:int;
 		public var vibrate:Number;
 		public var vibform:int;
@@ -85,7 +85,6 @@ package flxmp
 			loopLength	= 1.0;
 			waveType	= 0;
 			keyDown		= false;
-			rampOffset	= 0.0;
 			waveReverse	= false;
 			fadeout		= 1.0;
 			volEnvPos	= 0;
@@ -100,6 +99,7 @@ package flxmp
 			panning		= 0.5;
 			targetVolume = 0.0;
 			targetPanning = 0.5;
+			ignoreInstrument = false;
 		}
 		
 	}

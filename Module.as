@@ -61,7 +61,7 @@ package flxmp
 			
 			bytes.position 	= 76;
 			defaultTempo	= bytes.readUnsignedShort();
-			defaultBPM		= bytes.readUnsignedShort() - 10;
+			defaultBPM		= bytes.readUnsignedShort();
 			bpm				= defaultBPM;
 			tempo			= defaultTempo;
 			

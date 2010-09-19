@@ -22,6 +22,7 @@
 
 package flxmp
 {
+	import flash.display.Shape;
 	import flash.events.SampleDataEvent;
 	import flash.media.Sound;
 	import flash.media.SoundChannel;
@@ -36,6 +37,7 @@ package flxmp
 		private var bufferL:Vector.<Number>;
 		private var bufferR:Vector.<Number>;
 		private var tickCnt:int;
+		private var smpRest:int;
 		private var smpTick:int;
 		private var smpDone:int;
 		private var chan:Channel;
@@ -55,6 +57,10 @@ package flxmp
 		private var lastValue:Number;
 		private var nextValue:Number;
 		
+		public var wave:Shape;
+		public var env:Shape;
+		public var waveX:Number;
+		
 		public function Player(InitModule:Module) 
 		{
 			mod					= InitModule;
@@ -63,12 +69,21 @@ package flxmp
 			bufferR 			= new Vector.<Number>(8192, true);
 			tickCnt 			= 0;
 			smpTick 			= int(110250 / mod.bpm);
+			smpRest				= 0;
 			patternIndex		= 0;
 			pattern				= mod.patterns[mod.patternOrder[patternIndex]];
 			pattern.position	= 0;
 			gVolume				= 1.0;
 			playing				= false;
 			channelPos			= 0;
+			
+			wave = new Shape();
+			env = new Shape();
+			wave.graphics.lineStyle(0.1, 0xff0000);
+			env.graphics.lineStyle(0.1, 0x0000ff);
+			wave.graphics.moveTo(0, 0);
+			env.graphics.moveTo(0, 0);
+			waveX = 0;
 		}
 		
 		public function play():void
@@ -117,15 +132,26 @@ package flxmp
 			smpIncrement = smpTick;
 			while(smpDone < 8192)
 			{
-				if (++tickCnt == mod.tempo)
+				if (smpRest < 1)
+					tickCnt++;
+				
+				if (tickCnt == mod.tempo)
 				{
 					tickCnt = 0;
 					nextRow();
 				}
 				perTickProcessing();
 				
-				if ((smpDone + smpIncrement) > 8192)
-					smpIncrement = 8192 - smpDone;
+				if (smpRest > 0)
+				{
+					smpIncrement = smpRest;
+				}
+				else
+				{
+					smpIncrement = smpTick;
+					if ((smpDone + smpIncrement) > 8192)
+						smpIncrement 	= 8192 - smpDone;
+				}
 				
 				nextPos = lastPos + smpIncrement;
 					
@@ -147,8 +173,9 @@ package flxmp
 						if (chan.instrument.numSamples <= 0)
 							continue;
 							
-						//TODO: try to move this somewhere outside the sample processing loop
-						if ((tickCnt == (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97)
+						//TODO: try to manage the ramp down on note end further at the end of the final tick!
+						// ramp down when there is a new note command in the following row
+						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreInstrument)
 							chan.targetVolume	= 0.0;
 							
 						// volume ramping
@@ -161,12 +188,6 @@ package flxmp
 							}else {
 								if ((chan.volume		+= 5e-3) > chan.targetVolume)
 									chan.volume		= chan.targetVolume;
-							}
-						}else {
-							if (chan.volume == 0.0)
-							{
-								chan.wavePos	= 0.0;
-								continue;
 							}
 						}
 						
@@ -246,11 +267,24 @@ package flxmp
 								chan.nextIndex	= chan.lastIndex + 1;
 							}
 						}
+						
+						/*if (pattern.position > 800 && pattern.position < 1750 && i == 0)
+						{
+							waveX += 0.005;
+							wave.graphics.lineTo(waveX, bufferL[j] * 20);
+							env.graphics.lineTo(waveX, chan.instrument.volumeEnvelope[chan.volEnvPos] * 20);
+						}*/
 					}
 				}
 				smpDone += smpIncrement; 
 				lastPos = nextPos;
+				
+				if (smpRest > 0)
+					smpRest = 0;
 			}
+				
+			if (smpIncrement < smpTick)
+				smpRest = smpTick - smpIncrement;
 			
 			for (i = 0; i < 8192; i++)
 			{
@@ -297,19 +331,49 @@ package flxmp
 					chan.nextNote			= nextPattern.readUnsignedByte();
 				}
 				else
+				{
+					// check the note and effect command of next channel
 					chan.nextNote			= pattern.readUnsignedByte();
+					pattern.position 		+= 2;
+					chan.effect				= pattern.readUnsignedByte();
 					
+					// ignore next instrument command when porta to note effect is triggered in NEXT ROW
+					if (chan.effect 		== 0x3)
+						chan.ignoreInstrument = true;
+					else
+						chan.ignoreInstrument = false;
+				}
+				
+				// return to original pattern position
 				pattern.position	= tempPos;
 				
-				// read new instrument
+				// read instrument column
 				var inst:int		= pattern.readUnsignedByte();
-				if (inst > 0 && chan.note < 97)
+				
+				// read volume column command
+				chan.volumeCommand	= pattern.readUnsignedByte();
+				
+				// read effect column command
+				chan.effect			= pattern.readUnsignedByte();
+				chan.parameter		= pattern.readUnsignedByte();
+				
+				// ignore next instrument command when porta to note effect is triggered in THIS ROW
+				if (chan.effect 		== 0x3)
+					chan.ignoreInstrument = true;
+				else
+					chan.ignoreInstrument = false;
+				
+				if (chan.parameter > 0)
+					chan.oldParameter = chan.parameter;
+				
+				if (inst > 0 && chan.note < 97 && !chan.ignoreInstrument)
 				{
 					chan.wavePos		= 0.0;
 					chan.volEnvPos		= 0;
 					chan.panEnvPos		= 0;
 					chan.lastIndex		= 0;
 					chan.nextIndex		= 1;
+					chan.targetVolume	= 1.0;
 					chan.instrument		= mod.instruments[int(inst - 1)];
 					
 					if (chan.instrument.numSamples > 0)
@@ -326,26 +390,23 @@ package flxmp
 					}
 				}
 					
-				chan.volumeCommand	= pattern.readUnsignedByte();
-				chan.effect			= pattern.readUnsignedByte();
-				
-				chan.parameter		= pattern.readUnsignedByte();
-				if (chan.parameter > 0)
-					chan.oldParameter = chan.parameter;
-					
 				// process note command
 				if (chan.note > 0)
 				{
 					if (chan.note < 97)
 					{
-						chan.wavePos		= 0.0;
-						chan.lastIndex		= 0;
-						chan.nextIndex		= 1;
+						if (!chan.ignoreInstrument)
+						{
+							chan.wavePos		= 0.0;
+							chan.lastIndex		= 0;
+							chan.nextIndex		= 1;
+							chan.volEnvPos		= 0;
+							chan.panEnvPos		= 0;
+						}
+						
 						chan.realNote		= chan.note + chan.wave.relNote;
 						chan.keyDown 		= true;
 						chan.fadeout		= 1.0;
-						chan.volEnvPos		= 0;
-						chan.panEnvPos		= 0;
 						chan.columnVolume	= 1.0;
 						chan.oldPeriod		= chan.period;
 						chan.period			= 7680 - (chan.realNote-1) * 64 - (chan.wave.finetune * 0.5);
@@ -365,7 +426,9 @@ package flxmp
 				
 				// volume column
 				if (chan.volumeCommand > 0xF && chan.volumeCommand < 0x51)
-						chan.columnVolume 	= Number((0x10 - chan.volumeCommand) / 0x40);
+						chan.columnVolume 	= Number(0x10 - chan.volumeCommand) * 1.5625e-2;
+						
+				chan.targetVolume	= chan.waveVolume * chan.columnVolume;
 			}
 		}
 		
@@ -615,7 +678,7 @@ package flxmp
 							mod.tempo 	= chan.parameter;
 						else
 						{
-							mod.bpm		= chan.parameter - 10;	// FT2 manual states: "--- -- F40 -> Sets the tempo to 54 BPM"
+							mod.bpm		= chan.parameter;	// FT2 manual states: "--- -- F40 -> Sets the tempo to 54 BPM"
 							smpTick		= int(110250 / mod.bpm);
 						}
 					}
@@ -694,7 +757,7 @@ package flxmp
 						chan.targetVolume = 0.0;
 						
 					if (chan.targetVolume > 1.0)
-						chan.targetVolume = 0.0;
+						chan.targetVolume = 1.0;
 				}
 				else if (chan.effect == 0x1D)
 				{
