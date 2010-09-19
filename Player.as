@@ -59,6 +59,7 @@ package flxmp
 		
 		public var wave:Shape;
 		public var env:Shape;
+		public var tick:Shape;
 		public var waveX:Number;
 		
 		public function Player(InitModule:Module) 
@@ -79,10 +80,13 @@ package flxmp
 			
 			wave = new Shape();
 			env = new Shape();
+			tick = new Shape();
 			wave.graphics.lineStyle(0.1, 0xff0000);
 			env.graphics.lineStyle(0.1, 0x0000ff);
+			tick.graphics.lineStyle(0.1, 0x00ff00);
 			wave.graphics.moveTo(0, 0);
 			env.graphics.moveTo(0, 0);
+			tick.graphics.moveTo(0, 0);
 			waveX = 0;
 		}
 		
@@ -133,14 +137,14 @@ package flxmp
 			while(smpDone < 8192)
 			{
 				if (smpRest < 1)
-					tickCnt++;
-				
-				if (tickCnt == mod.tempo)
 				{
-					tickCnt = 0;
-					nextRow();
+					if (++tickCnt == mod.tempo)
+					{
+						tickCnt = 0;
+						nextRow();
+					}
+					perTickProcessing();
 				}
-				perTickProcessing();
 				
 				if (smpRest > 0)
 				{
@@ -268,11 +272,13 @@ package flxmp
 							}
 						}
 						
+						// Debug graphics
 						/*if (pattern.position > 800 && pattern.position < 1750 && i == 0)
 						{
 							waveX += 0.005;
 							wave.graphics.lineTo(waveX, bufferL[j] * 20);
 							env.graphics.lineTo(waveX, chan.instrument.volumeEnvelope[chan.volEnvPos] * 20);
+							tick.graphics.lineTo(waveX, tickCnt * 2);
 						}*/
 					}
 				}
@@ -280,7 +286,10 @@ package flxmp
 				lastPos = nextPos;
 				
 				if (smpRest > 0)
+				{
+					trace(smpRest);
 					smpRest = 0;
+				}
 			}
 				
 			if (smpIncrement < smpTick)
