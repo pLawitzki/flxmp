@@ -43,6 +43,7 @@ package flxmp
 		public var panEnvPos:int;
 		public var volEnvPos:int;
 		public var effect:int;
+		public var nextEffect:int;
 		public var ignoreInstrument:Boolean;
 		public var parameter:int;
 		public var oldParameter:int;

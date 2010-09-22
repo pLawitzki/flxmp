@@ -37,6 +37,7 @@ package flxmp
 		private var bufferL:Vector.<Number>;
 		private var bufferR:Vector.<Number>;
 		private var tickCnt:int;
+		private var sampleCountdown:int;
 		private var smpRest:int;
 		private var smpTick:int;
 		private var smpDone:int;
@@ -70,6 +71,7 @@ package flxmp
 			bufferR 			= new Vector.<Number>(8192, true);
 			tickCnt 			= 0;
 			smpTick 			= int(110250 / mod.bpm);
+			sampleCountdown		= smpTick;
 			smpRest				= 0;
 			patternIndex		= 0;
 			pattern				= mod.patterns[mod.patternOrder[patternIndex]];
@@ -134,10 +136,12 @@ package flxmp
 			
 			smpDone = 0;
 			smpIncrement = smpTick;
+			sampleCountdown = smpTick;
 			while(smpDone < 8192)
 			{
 				if (smpRest < 1)
 				{
+					sampleCountdown = smpTick;
 					if (++tickCnt == mod.tempo)
 					{
 						tickCnt = 0;
@@ -177,11 +181,15 @@ package flxmp
 						if (chan.instrument.numSamples <= 0)
 							continue;
 							
-						//TODO: try to manage the ramp down on note end further at the end of the final tick!
+						//TODO: there is a sound glitch when portamento to note is triggered (check ignoreInstrument)
 						// ramp down when there is a new note command in the following row
 						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreInstrument)
-							chan.targetVolume	= 0.0;
-							
+						{
+							trace(chan.effect + " | " + chan.ignoreInstrument);
+							if( sampleCountdown <= 200)
+								chan.targetVolume	= 0.0;
+						}
+						
 						// volume ramping
 						if (chan.volume != chan.targetVolume)
 						{
@@ -273,7 +281,7 @@ package flxmp
 						}
 						
 						// Debug graphics
-						/*if (pattern.position > 800 && pattern.position < 1750 && i == 0)
+						/*if (pattern.position > 400 && pattern.position < 1750 && i == 0)
 						{
 							waveX += 0.005;
 							wave.graphics.lineTo(waveX, bufferL[j] * 20);
@@ -281,15 +289,13 @@ package flxmp
 							tick.graphics.lineTo(waveX, tickCnt * 2);
 						}*/
 					}
+					sampleCountdown--;
 				}
 				smpDone += smpIncrement; 
 				lastPos = nextPos;
 				
 				if (smpRest > 0)
-				{
-					trace(smpRest);
 					smpRest = 0;
-				}
 			}
 				
 			if (smpIncrement < smpTick)
@@ -344,13 +350,7 @@ package flxmp
 					// check the note and effect command of next channel
 					chan.nextNote			= pattern.readUnsignedByte();
 					pattern.position 		+= 2;
-					chan.effect				= pattern.readUnsignedByte();
-					
-					// ignore next instrument command when porta to note effect is triggered in NEXT ROW
-					if (chan.effect 		== 0x3)
-						chan.ignoreInstrument = true;
-					else
-						chan.ignoreInstrument = false;
+					chan.nextEffect				= pattern.readUnsignedByte();
 				}
 				
 				// return to original pattern position
@@ -366,8 +366,8 @@ package flxmp
 				chan.effect			= pattern.readUnsignedByte();
 				chan.parameter		= pattern.readUnsignedByte();
 				
-				// ignore next instrument command when porta to note effect is triggered in THIS ROW
-				if (chan.effect 		== 0x3)
+				// ignore next instrument command when porta to note effect is triggered THIS or NEXT ROW
+				if (chan.effect == 0x3 || chan.nextEffect == 0x3)
 					chan.ignoreInstrument = true;
 				else
 					chan.ignoreInstrument = false;
