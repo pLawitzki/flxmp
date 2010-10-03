@@ -344,13 +344,15 @@ package flxmp
 					// need to get note from first row of next pattern
 					nextPattern.position	= 5 * mod.numChannels - 1;
 					chan.nextNote			= nextPattern.readUnsignedByte();
+					nextPattern.position	+= 2;
+					chan.nextEffect			= nextPattern.readUnsignedByte();
 				}
 				else
 				{
 					// check the note and effect command of next channel
 					chan.nextNote			= pattern.readUnsignedByte();
 					pattern.position 		+= 2;
-					chan.nextEffect				= pattern.readUnsignedByte();
+					chan.nextEffect			= pattern.readUnsignedByte();
 				}
 				
 				// return to original pattern position
@@ -413,14 +415,31 @@ package flxmp
 							chan.panEnvPos		= 0;
 						}
 						
-						chan.realNote		= chan.note + chan.wave.relNote;
-						chan.keyDown 		= true;
-						chan.fadeout		= 1.0;
-						chan.columnVolume	= 1.0;
-						chan.oldPeriod		= chan.period;
-						chan.period			= 7680 - (chan.realNote-1) * 64 - (chan.wave.finetune * 0.5);
-						chan.targetPeriod	= chan.period;
-						chan.waveStep 		= 0.189637188 * Math.pow(2, ((4608 - chan.period) * 1.3020833333333e-3));
+						if (chan.wave != null)
+						{
+							chan.realNote		= chan.note + chan.wave.relNote;
+						
+							chan.keyDown 		= true;
+							chan.fadeout		= 1.0;
+							chan.columnVolume	= 1.0;
+							
+							// calculate period and/or target period
+							if (chan.effect == 0x3)
+							{
+								chan.oldPeriod		= chan.period;
+								chan.targetPeriod	= 7680 - (chan.realNote-1) * 64 - (chan.wave.finetune * 0.5);
+							}
+							else
+							{
+								chan.period			= 7680 - (chan.realNote-1) * 64 - (chan.wave.finetune * 0.5);
+								chan.oldPeriod		= chan.period;
+							}
+							
+							// calculate wave step length from period
+							chan.waveStep 		= 0.189637188 * Math.pow(2, ((4608 - chan.period) * 1.3020833333333e-3));
+						}else {
+							chan.waveStep		= 0.0;
+						}
 					}else {
 						chan.keyDown 		= false;
 						
