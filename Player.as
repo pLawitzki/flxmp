@@ -185,7 +185,6 @@ package flxmp
 						// ramp down when there is a new note command in the following row
 						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreInstrument)
 						{
-							trace(chan.effect + " | " + chan.ignoreInstrument);
 							if( sampleCountdown <= 200)
 								chan.targetVolume	= 0.0;
 						}
@@ -687,7 +686,10 @@ package flxmp
 					else if (upperByte == 0xC0)	// note cut
 					{
 						if (tickCnt >= (chan.parameter & 0xF))
+						{
 							chan.targetVolume	= 0.0;
+							chan.columnVolume	= 0;
+						}
 					}
 					else if (upperByte == 0xD0)
 					{
