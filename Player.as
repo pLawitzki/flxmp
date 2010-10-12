@@ -48,6 +48,19 @@ package flxmp
 		private var playing:Boolean;
 		private var channelPos:int;
 		
+		// volume table			
+		private const VOL_TAB:Vector.<Number> = Vector.<Number>([
+			0.0,			0.070036183,	0.128709969,	0.179535514,	0.224366822,	0.264469794,	0.300747344,	0.333866153,
+			0.364332504,	0.392539939,	0.418800433,	0.443365484,	0.466440803,	0.488196792,	0.508776192,	0.528299764,
+			0.546870578,	0.564577314,	0.581496819,	0.597696123,	0.613234043,	0.628162474,	0.642527431,	0.656369909,
+			0.669726584,	0.682630403,	0.695111068,	0.707195454,	0.718907953,	0.730270773,	0.741304188,	0.752026762,
+			0.762455529,	0.772606162,	0.782493113,	0.792129734,	0.801528389,	0.810700548,	0.819656871,	0.828407284,
+			0.836961042,	0.845326789,	0.853512614,	0.861526093,	0.869374334,	0.877064013,	0.884601412,	0.891992444,
+			0.899242686,	0.906357401,	0.913341564,	0.920199879,	0.926936801,	0.933556554,	0.940063143,	0.946460373,
+			0.952751858,	0.958941038,	0.965031187,	0.971025424,	0.976926723,	0.982737923,	0.988461733,	0.994100743,
+			1.0]);
+
+			
 		// helper variables
 		private var smpIncrement:int;
 		private var i:int;
@@ -183,7 +196,7 @@ package flxmp
 							
 						//TODO: there is a sound glitch when portamento to note is triggered (check ignoreInstrument)
 						// ramp down when there is a new note command in the following row
-						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreInstrument)
+						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreNextInstrument)
 						{
 							if( sampleCountdown <= 200)
 								chan.targetVolume	= 0.0;
@@ -368,11 +381,16 @@ package flxmp
 				chan.parameter		= pattern.readUnsignedByte();
 				
 				// ignore next instrument command when porta to note effect is triggered THIS or NEXT ROW
-				if (chan.effect == 0x3 || chan.nextEffect == 0x3)
+				if (chan.effect == 0x3)
 					chan.ignoreInstrument = true;
 				else
 					chan.ignoreInstrument = false;
 				
+				if (chan.nextEffect == 0x3)
+					chan.ignoreNextInstrument = true;
+				else
+					chan.ignoreNextInstrument = false;
+					
 				if (chan.parameter > 0)
 					chan.oldParameter = chan.parameter;
 				
@@ -420,6 +438,7 @@ package flxmp
 						
 							chan.keyDown 		= true;
 							chan.fadeout		= 1.0;
+							chan.volumeTabIndex	= 0x40;
 							chan.columnVolume	= 1.0;
 							
 							// calculate period and/or target period
@@ -453,8 +472,11 @@ package flxmp
 				
 				// volume column
 				if (chan.volumeCommand > 0xF && chan.volumeCommand < 0x51)
-						chan.columnVolume 	= Number(0x10 - chan.volumeCommand) * 1.5625e-2;
-						
+				{
+					chan.volumeTabIndex = chan.volumeCommand - 0x10
+					chan.columnVolume 	= VOL_TAB[chan.volumeTabIndex];
+				}
+				
 				chan.targetVolume	= chan.waveVolume * chan.columnVolume;
 			}
 		}
@@ -468,25 +490,39 @@ package flxmp
 				// volume commands
 				if (chan.volumeCommand > 0x50)
 				{
-					if ((chan.volumeCommand & 0xF0) == 0x60)
+					if ((chan.volumeCommand & 0xF0) == 0x60)		// Volume slide down
 					{
-						// TODO:	Volume slide down
+						if ((chan.volumeTabIndex -= (chan.volumeCommand & 0xF)) < 0)
+							chan.volumeTabIndex = 0;
+							
+						chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
 					}
-					else if ((chan.volumeCommand & 0xF0) == 0x60)
+					else if ((chan.volumeCommand & 0xF0) == 0x70)	// Volume slide up
 					{
-						// TODO:	Volume slide up
+						if ((chan.volumeTabIndex += (chan.volumeCommand & 0xF)) > 64)
+							chan.volumeTabIndex = 64;
+							
+						chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
 					}
-					else if ((chan.volumeCommand & 0xF0) == 0x70)
+					else if ((chan.volumeCommand & 0xF0) == 0x80)	// Fine volume slide down
 					{
-						// TODO:	Volume slide down
+						if (tickCnt == 0)
+						{
+							if ((chan.volumeTabIndex -= (chan.volumeCommand & 0xF)) < 0)
+								chan.volumeTabIndex = 0;
+								
+							chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
+						}
 					}
-					else if ((chan.volumeCommand & 0xF0) == 0x80)
+					else if ((chan.volumeCommand & 0xF0) == 0x90)	// Fine volume slide up
 					{
-						// TODO:	Fine volume slide down
-					}
-					else if ((chan.volumeCommand & 0xF0) == 0x90)
-					{
-						// TODO:	Fine volume slide up
+						if (tickCnt == 0)
+						{
+							if ((chan.volumeTabIndex += (chan.volumeCommand & 0xF)) > 64)
+								chan.volumeTabIndex = 64;
+								
+							chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
+						}
 					}
 					else if ((chan.volumeCommand & 0xF0) == 0xA0)
 					{
@@ -500,7 +536,7 @@ package flxmp
 					{
 						chan.wavePanning	= Number(chan.volumeCommand & 0xF) * 6.25e-2
 					}
-					else if ((chan.volumeCommand & 0xF0) == 0xD0)
+					else if ((chan.volumeCommand & 0xF0) == 0xD0)	
 					{
 						// TODO:	Panning slide left
 					}

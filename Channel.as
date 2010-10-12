@@ -39,12 +39,14 @@ package flxmp
 		public var targetVolume:Number;
 		public var targetPanning:Number;
 		public var volumeCommand:int;
+		public var volumeTabIndex:int;
 		public var fadeout:Number;
 		public var panEnvPos:int;
 		public var volEnvPos:int;
 		public var effect:int;
 		public var nextEffect:int;
 		public var ignoreInstrument:Boolean;
+		public var ignoreNextInstrument:Boolean;
 		public var parameter:int;
 		public var oldParameter:int;
 		public var wave:Wave;
@@ -96,11 +98,13 @@ package flxmp
 			vibform		= 0;
 			vibtime		= 0.0;
 			columnVolume = 1.0;
+			volumeTabIndex = 0x40;
 			volume		= 0.0;
 			panning		= 0.5;
 			targetVolume = 0.0;
 			targetPanning = 0.5;
 			ignoreInstrument = false;
+			ignoreNextInstrument = false;
 		}
 		
 	}
