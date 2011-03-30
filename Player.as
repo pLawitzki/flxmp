@@ -48,8 +48,20 @@ package flxmp
 		private var playing:Boolean;
 		private var channelPos:int;
 		
-		// volume table			
-		private const VOL_TAB:Vector.<Number> = Vector.<Number>([
+		// linear volume table			
+		private const VOL_TAB_LIN:Vector.<Number> = Vector.<Number>([
+			0.0,	0.015625,	0.03125,	0.046875,	0.0625,		0.078125,		0.09375,	0.109375,
+			0.125,	0.140625,	0.15625,	0.171875,	0.1875,		0.203125,		0.21875,	0.234375,
+			0.25,	0.265625,	0.28125,	0.296875,	0.3125,		0.328125,		0.34375,	0.359375,
+			0.375,	0.390625,	0.40625,	0.421875,	0.4375,		0.453125,		0.46875,	0.484375,
+			0.5,	0.515625,	0.53125,	0.546875,	0.5625,		0.578125,		0.59375,	0.609375,
+			0.625,	0.640625,	0.65625,	0.671875,	0.6875,		0.703125,		0.71875,	0.734375,
+			0.75,	0.765625,	0.78125,	0.796875,	0.8125,		0.828125,		0.84375,	0.859375,
+			0.875,	0.890625,	0.90625,	0.921875,	0.9375,		0.953125,		0.96875,	0.984375,
+			1.0]);
+
+		// logarithmic volume table			
+		private const VOL_TAB_LOG:Vector.<Number> = Vector.<Number>([
 			0.0,			0.070036183,	0.128709969,	0.179535514,	0.224366822,	0.264469794,	0.300747344,	0.333866153,
 			0.364332504,	0.392539939,	0.418800433,	0.443365484,	0.466440803,	0.488196792,	0.508776192,	0.528299764,
 			0.546870578,	0.564577314,	0.581496819,	0.597696123,	0.613234043,	0.628162474,	0.642527431,	0.656369909,
@@ -59,7 +71,6 @@ package flxmp
 			0.899242686,	0.906357401,	0.913341564,	0.920199879,	0.926936801,	0.933556554,	0.940063143,	0.946460373,
 			0.952751858,	0.958941038,	0.965031187,	0.971025424,	0.976926723,	0.982737923,	0.988461733,	0.994100743,
 			1.0]);
-
 			
 		// helper variables
 		private var smpIncrement:int;
@@ -207,10 +218,10 @@ package flxmp
 						{
 							if (chan.volume > chan.targetVolume)
 							{
-								if ((chan.volume 	-= 5e-3) < chan.targetVolume)
+								if ((chan.volume 	-= 3e-3) < chan.targetVolume)
 									chan.volume		= chan.targetVolume;
 							}else {
-								if ((chan.volume		+= 5e-3) > chan.targetVolume)
+								if ((chan.volume		+= 3e-3) > chan.targetVolume)
 									chan.volume		= chan.targetVolume;
 							}
 						}
@@ -474,7 +485,7 @@ package flxmp
 				if (chan.volumeCommand > 0xF && chan.volumeCommand < 0x51)
 				{
 					chan.volumeTabIndex = chan.volumeCommand - 0x10
-					chan.columnVolume 	= VOL_TAB[chan.volumeTabIndex];
+					chan.columnVolume 	= VOL_TAB_LIN[chan.volumeTabIndex];
 				}
 				
 				chan.targetVolume	= chan.waveVolume * chan.columnVolume;
@@ -495,14 +506,14 @@ package flxmp
 						if ((chan.volumeTabIndex -= (chan.volumeCommand & 0xF)) < 0)
 							chan.volumeTabIndex = 0;
 							
-						chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
+						chan.columnVolume	= VOL_TAB_LIN[chan.volumeTabIndex];
 					}
 					else if ((chan.volumeCommand & 0xF0) == 0x70)	// Volume slide up
 					{
 						if ((chan.volumeTabIndex += (chan.volumeCommand & 0xF)) > 64)
 							chan.volumeTabIndex = 64;
 							
-						chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
+						chan.columnVolume	= VOL_TAB_LIN[chan.volumeTabIndex];
 					}
 					else if ((chan.volumeCommand & 0xF0) == 0x80)	// Fine volume slide down
 					{
@@ -511,7 +522,7 @@ package flxmp
 							if ((chan.volumeTabIndex -= (chan.volumeCommand & 0xF)) < 0)
 								chan.volumeTabIndex = 0;
 								
-							chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
+							chan.columnVolume	= VOL_TAB_LIN[chan.volumeTabIndex];
 						}
 					}
 					else if ((chan.volumeCommand & 0xF0) == 0x90)	// Fine volume slide up
@@ -521,7 +532,7 @@ package flxmp
 							if ((chan.volumeTabIndex += (chan.volumeCommand & 0xF)) > 64)
 								chan.volumeTabIndex = 64;
 								
-							chan.columnVolume	= VOL_TAB[chan.volumeTabIndex];
+							chan.columnVolume	= VOL_TAB_LIN[chan.volumeTabIndex];
 						}
 					}
 					else if ((chan.volumeCommand & 0xF0) == 0xA0)
