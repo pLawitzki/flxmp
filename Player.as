@@ -48,6 +48,10 @@ package flxmp
 		private var playing:Boolean;
 		private var channelPos:int;
 		
+		public var startTime:Date;
+		public var endTime:Date;
+		public var cycleMonitorText:String;
+		
 		// linear volume table			
 		private const VOL_TAB_LIN:Vector.<Number> = Vector.<Number>([
 			0.0,	0.015625,	0.03125,	0.046875,	0.0625,		0.078125,		0.09375,	0.109375,
@@ -114,6 +118,8 @@ package flxmp
 			env.graphics.moveTo(0, 0);
 			tick.graphics.moveTo(0, 0);
 			waveX = 0;
+			
+			cycleMonitorText = new String();
 		}
 		
 		public function play():void
@@ -154,6 +160,8 @@ package flxmp
 		
 		private function onSampleData(e:SampleDataEvent):void
 		{
+			startTime = new Date();
+			
 			smpIncrement 	= 0;
 			lastPos 		= 0;
 			nextPos 		= 0;
@@ -331,6 +339,10 @@ package flxmp
 				e.data.writeFloat(bufferR[i]);
 				bufferR[i] = 0.0;
 			}
+			
+			endTime = new Date();
+			
+			cycleMonitorText = (endTime.time - startTime.time).toString();
 		}
 		
 		private function nextRow():void
