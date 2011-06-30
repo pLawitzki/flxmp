@@ -208,6 +208,7 @@ package flxmp
 						instruments[i].waves[j]				= new Wave();
 						instruments[i].waves[j].length		= bytes.readUnsignedInt();
 						instruments[i].waves[j].samples		= new Vector.<Number>(instruments[i].waves[j].length, true);
+						instruments[i].waves[j].sampleList	= new Vector.<MonoListNode>(instruments[i].waves[j].length, true);
 						instruments[i].waves[j].loopStart	= bytes.readUnsignedInt();
 						instruments[i].waves[j].loopLength	= bytes.readUnsignedInt();
 						instruments[i].waves[j].loopEnd		= instruments[i].waves[j].loopStart + instruments[i].waves[j].loopLength;
@@ -237,6 +238,12 @@ package flxmp
 										newSampleValue =  oldSampleValue + instruments[i].waves[j].samples[k];
 								}
 								instruments[i].waves[j].samples[k] = Number(newSampleValue) * 3.0517578125e-5;
+								instruments[i].waves[j].sampleList[k] = new MonoListNode();
+								instruments[i].waves[j].sampleList[k].value = Number(newSampleValue) * 3.0517578125e-5;
+								if(k) {
+									instruments[i].waves[j].sampleList[k].prev = instruments[i].waves[j].sampleList[k - 1];
+									instruments[i].waves[j].sampleList[k - 1].next = instruments[i].waves[j].sampleList[k];
+								}
 								oldSampleValue = newSampleValue;
 							}
 						}else {
@@ -252,6 +259,12 @@ package flxmp
 										newSampleValue =  oldSampleValue + instruments[i].waves[j].samples[k];
 								}
 								instruments[i].waves[j].samples[k] = newSampleValue * 0.0078125;
+								instruments[i].waves[j].sampleList[k] = new MonoListNode();
+								instruments[i].waves[j].sampleList[k].value = newSampleValue * 0.0078125;
+								if(k) {
+									instruments[i].waves[j].sampleList[k].prev = instruments[i].waves[j].sampleList[k - 1];
+									instruments[i].waves[j].sampleList[k - 1].next = instruments[i].waves[j].sampleList[k];
+								}
 								oldSampleValue = newSampleValue;
 							}
 						}

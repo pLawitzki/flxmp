@@ -27,6 +27,7 @@ package flxmp
 	{
 		public var name:String;
 		public var samples:Vector.<Number>;
+		public var sampleList:Vector.<MonoListNode>;
 		public var length:int;
 		public var loopStart:int;
 		public var loopLength:int;

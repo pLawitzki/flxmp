@@ -36,6 +36,9 @@ package flxmp
 		private var soundChannel:SoundChannel;
 		private var bufferL:Vector.<Number>;
 		private var bufferR:Vector.<Number>;
+		private var stereoBuffer:Vector.<StereoListNode>;
+		private var nextPosNode:StereoListNode;
+		private var bufferPtr:StereoListNode;
 		private var tickCnt:int;
 		private var sampleCountdown:int;
 		private var smpRest:int;
@@ -97,6 +100,7 @@ package flxmp
 			sound 				= new Sound();
 			bufferL 			= new Vector.<Number>(8192, true);
 			bufferR 			= new Vector.<Number>(8192, true);
+			stereoBuffer		= new Vector.<StereoListNode>(8192, true);
 			tickCnt 			= 0;
 			smpTick 			= int(110250 / mod.bpm);
 			sampleCountdown		= smpTick;
@@ -118,6 +122,12 @@ package flxmp
 			env.graphics.moveTo(0, 0);
 			tick.graphics.moveTo(0, 0);
 			waveX = 0;
+			
+			for (i = 0; i < 8192; i++) {
+				stereoBuffer[i] = new StereoListNode();
+				if (i)
+					stereoBuffer[i - 1].next = stereoBuffer[i];
+			}
 			
 			cycleMonitorText = new String();
 		}
@@ -194,11 +204,18 @@ package flxmp
 				}
 				
 				nextPos = lastPos + smpIncrement;
-					
-				for (j = lastPos; j < nextPos; j++)
+				
+				bufferPtr = stereoBuffer[lastPos];
+				nextPosNode = stereoBuffer[nextPos - 1];
+				
+				//for (j = lastPos; j < nextPos; j++)
+				while(true)
 				{
+					if (nextPosNode.next == bufferPtr)
+						break;
+						
 					for (i = 0; i < mod.numChannels; i++)
-					{							
+					{
 						chan = mod.channels[i];
 						
 						if (chan.waveStep == 0.0)
@@ -253,8 +270,11 @@ package flxmp
 						sample		*= gVolume;
 						sample		*= chan.volume;
 						
-						bufferL[j] += sample * (1.0 - chan.panning);
-						bufferR[j] += sample * chan.panning;
+						bufferPtr.left += sample * (1.0 - chan.panning);
+						bufferPtr.right += sample * chan.panning;
+						
+						//bufferL[j] += sample * (1.0 - chan.panning);
+						//bufferR[j] += sample * chan.panning;
 						
 						if(chan.waveType > 0)
 						{
@@ -320,6 +340,7 @@ package flxmp
 							tick.graphics.lineTo(waveX, tickCnt * 2);
 						}*/
 					}
+					bufferPtr = bufferPtr.next;
 					sampleCountdown--;
 				}
 				smpDone += smpIncrement; 
@@ -332,12 +353,20 @@ package flxmp
 			if (smpIncrement < smpTick)
 				smpRest = smpTick - smpIncrement;
 			
-			for (i = 0; i < 8192; i++)
+			/*for (i = 0; i < 8192; i++)
 			{
 				e.data.writeFloat(bufferL[i]);
 				bufferL[i] = 0.0;
 				e.data.writeFloat(bufferR[i]);
 				bufferR[i] = 0.0;
+			}*/
+			bufferPtr = stereoBuffer[0];
+			while (bufferPtr) {
+				e.data.writeFloat(bufferPtr.left);
+				e.data.writeFloat(bufferPtr.right);
+				bufferPtr.left = 0.0;
+				bufferPtr.right = 0.0;
+				bufferPtr = bufferPtr.next;
 			}
 			
 			endTime = new Date();
