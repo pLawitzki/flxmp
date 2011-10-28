@@ -230,7 +230,7 @@ package flxmp
 						if (chan.instrument.numSamples <= 0)
 							continue;
 							
-						//TODO: there is a sound glitch when portamento to note is triggered (check ignoreInstrument)
+						// TODO: there is a sound glitch when portamento to note is triggered (check ignoreInstrument)
 						// ramp down when there is a new note command in the following row
 						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreNextInstrument)
 						{
