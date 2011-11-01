@@ -27,7 +27,6 @@ package flxmp
 	import flash.media.Sound;
 	import flash.media.SoundChannel;
 	import flash.utils.ByteArray;
-	import org.flashdevelop.utils.FlashConnect;
 	
 	public class Player
 	{
@@ -200,7 +199,7 @@ package flxmp
 				{
 					smpIncrement = smpTick;
 					if ((smpDone + smpIncrement) > 8192)
-						smpIncrement 	= 8192 - smpDone;
+						smpIncrement = 8192 - smpDone;
 				}
 				
 				nextPos = lastPos + smpIncrement;
