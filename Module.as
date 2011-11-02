@@ -21,7 +21,7 @@
  */
 
 package flxmp
-{
+{	
 	import flash.utils.ByteArray;
 	import flash.utils.Endian;
 	import org.flashdevelop.utils.FlashConnect;
@@ -42,7 +42,7 @@ package flxmp
 		public var channels:Vector.<Channel>;
 		
 		public function Module(ModuleBin:Class) 
-		{
+		{			
 			var i:int, j:int, k:int;
 			var bytes:ByteArray = new ModuleBin() as ByteArray;
 			var headerSize:uint;
@@ -207,15 +207,24 @@ package flxmp
 					{
 						instruments[i].waves[j]				= new Wave();
 						instruments[i].waves[j].length		= bytes.readUnsignedInt();
-						instruments[i].waves[j].samples		= new Vector.<Number>(instruments[i].waves[j].length, true);
-						instruments[i].waves[j].sampleList	= new Vector.<MonoListNode>(instruments[i].waves[j].length, true);
 						instruments[i].waves[j].loopStart	= bytes.readUnsignedInt();
 						instruments[i].waves[j].loopLength	= bytes.readUnsignedInt();
 						instruments[i].waves[j].loopEnd		= instruments[i].waves[j].loopStart + instruments[i].waves[j].loopLength;
 						instruments[i].waves[j].volume		= Number(bytes.readUnsignedByte())/64;
 						instruments[i].waves[j].finetune	= Number(bytes.readByte());
 						instruments[i].waves[j].type		= bytes.readUnsignedByte();
-						if ((instruments[i].waves[j].type & 0x10) > 0) instruments[i].waves[j].sixteenbit = true; else instruments[i].waves[j].sixteenbit = false;
+						
+						if ((instruments[i].waves[j].type & 0x10) > 0) {
+							instruments[i].waves[j].sixteenbit = true;
+							instruments[i].waves[j].length = instruments[i].waves[j].length >> 1;
+							instruments[i].waves[j].loopEnd = instruments[i].waves[j].loopStart + instruments[i].waves[j].loopLength;
+						}
+						else
+							instruments[i].waves[j].sixteenbit = false;
+						
+						instruments[i].waves[j].samples		= new Vector.<Number>(instruments[i].waves[j].length, true);
+						instruments[i].waves[j].sampleList	= new Vector.<MonoListNode>(instruments[i].waves[j].length, true);
+							
 						instruments[i].waves[j].type		= instruments[i].waves[j].type & 0x3;
 						instruments[i].waves[j].panning		= Number(bytes.readUnsignedByte())/256;
 						instruments[i].waves[j].relNote		= bytes.readByte();
@@ -226,7 +235,6 @@ package flxmp
 						var oldSampleValue:Number = 0.0;
 						var newSampleValue:Number;
 						if (instruments[i].waves[j].sixteenbit) {
-							instruments[i].waves[j].length = instruments[i].waves[j].length >> 1
 							for (k = 0; k < instruments[i].waves[j].length; k++) {
 								instruments[i].waves[j].samples[k] = bytes.readShort();
 								if (oldSampleValue + instruments[i].waves[j].samples[k] < -32768)
@@ -268,6 +276,15 @@ package flxmp
 								oldSampleValue = newSampleValue;
 							}
 						}
+						// make wav list circular
+						instruments[i].waves[j].sampleList[0].prev = instruments[i].waves[j].sampleList[instruments[i].waves[j].length - 1];
+						instruments[i].waves[j].sampleList[0].prev.next = instruments[i].waves[j].sampleList[0];
+						
+						// TODO: store loop start and end positions as node pointers
+						instruments[i].waves[j].loopStartNode = instruments[i].waves[j].sampleList[instruments[i].waves[j].loopStart];
+						trace(instruments[i].waves[j].sampleList.length)
+						if (instruments[i].waves[j].loopEnd > 0)
+							instruments[i].waves[j].loopEndNode = instruments[i].waves[j].sampleList[instruments[i].waves[j].loopEnd - 1];						
 					}
 					
 				}

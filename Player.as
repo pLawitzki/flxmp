@@ -175,6 +175,8 @@ package flxmp
 			lastPos 		= 0;
 			nextPos 		= 0;
 			
+			var lastNode:MonoListNode;
+			
 			smpDone = 0;
 			smpIncrement = smpTick;
 			sampleCountdown = smpTick;
@@ -229,6 +231,8 @@ package flxmp
 						if (chan.instrument.numSamples <= 0)
 							continue;
 							
+						lastNode = chan.waveList[0];
+							
 						// TODO: there is a sound glitch when portamento to note is triggered (check ignoreInstrument)
 						// ramp down when there is a new note command in the following row
 						if ((tickCnt >= (mod.tempo - 1)) && chan.nextNote != 0 && chan.nextNote < 97 && !chan.ignoreNextInstrument)
@@ -263,6 +267,7 @@ package flxmp
 							}
 						}
 						
+						// value interpolation
 						lastValue	= chan.waveData[chan.lastIndex];
 						nextValue	= chan.waveData[chan.nextIndex];
 						sample		= lastValue + (nextValue - lastValue) * (chan.wavePos - Number(int(chan.wavePos)));
@@ -463,6 +468,7 @@ package flxmp
 						chan.loopEnd		= Number(chan.wave.loopEnd);
 						chan.loopLength		= Number(chan.wave.loopLength);
 						chan.waveData		= chan.wave.samples;
+						chan.waveList		= chan.wave.sampleList;
 						chan.waveVolume		= chan.wave.volume;
 						chan.wavePanning	= chan.wave.panning;
 						chan.waveType		= chan.wave.type;

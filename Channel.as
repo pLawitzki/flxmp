@@ -51,6 +51,7 @@ package flxmp
 		public var oldParameter:int;
 		public var wave:Wave;
 		public var waveData:Vector.<Number>;
+		public var waveList:Vector.<MonoListNode>;
 		public var waveType:int;
 		public var wavePos:Number;
 		public var waveVolume:Number;
@@ -80,6 +81,7 @@ package flxmp
 			nextIndex	= 1;
 			waveStep	= 0.0;
 			waveData	= new Vector.<Number>;
+			waveList	= new Vector.<MonoListNode>;
 			waveData.push(0.0);
 			wavePanning	= 0.5;
 			waveVolume	= 1.0;

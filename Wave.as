@@ -30,8 +30,10 @@ package flxmp
 		public var sampleList:Vector.<MonoListNode>;
 		public var length:int;
 		public var loopStart:int;
+		public var loopStartNode:MonoListNode;
 		public var loopLength:int;
 		public var loopEnd:int;
+		public var loopEndNode:MonoListNode;
 		public var volume:Number;
 		public var finetune:Number;
 		public var sixteenbit:Boolean;
